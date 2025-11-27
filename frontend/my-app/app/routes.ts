@@ -7,6 +7,7 @@ export default [
   route("dashboard-admin", "Pages/DashboardAdmin.tsx"),
   route("dashboard-peminjam", "Pages/DashboardPeminjam.tsx"),
   route("daftarbuku", "Pages/DaftarBuku.tsx"),
+  route("tambah-buku", "Pages/TambahBuku.tsx"),
   route("peminjamanBuku", "Pages/PeminjamanBuku.tsx"),
   route("form-peminjaman", "Pages/FormPeminjaman.tsx"),
 ] satisfies RouteConfig;

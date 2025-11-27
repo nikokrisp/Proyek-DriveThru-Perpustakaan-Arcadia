@@ -1,6 +1,7 @@
 import { Button } from "~/components/ui/button";
 import { useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
+import { useState } from "react";
 import {
   Form,
   FormControl,
@@ -11,17 +12,19 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
+import { ImageInput } from "~/components/ui/image-input";
+import { registerPeminjam } from "~/lib/firebaseServices";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 const registerSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
+  nama_peminjam: z.string().min(2, "Nama harus minimal 2 karakter"),
+  user_peminjam: z.string().min(3, "Username harus minimal 3 karakter"),
+  pass_peminjam: z.string().min(6, "Password harus minimal 6 karakter"),
+  confirmPassword: z.string().min(6, "Password harus minimal 6 karakter"),
+  foto_peminjam: z.instanceof(File).optional(),
+}).refine((data) => data.pass_peminjam === data.confirmPassword, {
+  message: "Password tidak cocok",
   path: ["confirmPassword"],
 });
 
@@ -29,20 +32,39 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function Register() {
   const navigate = useNavigate();
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      name: "",
-      username: "",
-      email: "",
-      password: "",
+      nama_peminjam: "",
+      user_peminjam: "",
+      pass_peminjam: "",
       confirmPassword: "",
     },
   });
 
-  const onSubmit = (data: RegisterFormValues) => {
-    console.log("Register:", { name: data.name, username: data.username, email: data.email });
-    // Handle registration logic here
+  const onSubmit = async (data: RegisterFormValues) => {
+    setIsLoading(true);
+    try {
+      // Generate email from username for Firebase Auth
+      const email = `${data.user_peminjam}@example.com`;
+      
+      await registerPeminjam(
+        email,
+        data.pass_peminjam,
+        data.nama_peminjam,
+        data.user_peminjam,
+        photoFile || undefined
+      );
+      navigate("/dashboard-peminjam");
+    } catch (error: any) {
+      form.setError("root", { message: error.message });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -55,15 +77,21 @@ export default function Register() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {form.formState.errors.root && (
+                <div className="p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+                  {form.formState.errors.root.message}
+                </div>
+              )}
+
               <FormField
                 control={form.control}
-                name="name"
+                name="nama_peminjam"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Name</FormLabel>
+                    <FormLabel>Nama Lengkap</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="John Doe"
+                        placeholder="Nama Lengkap"
                         {...field}
                       />
                     </FormControl>
@@ -74,13 +102,13 @@ export default function Register() {
 
               <FormField
                 control={form.control}
-                name="username"
+                name="user_peminjam"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Username</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="johndoe123"
+                        placeholder="username123"
                         {...field}
                       />
                     </FormControl>
@@ -91,25 +119,7 @@ export default function Register() {
 
               <FormField
                 control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email Address</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="you@example.com"
-                        type="email"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="password"
+                name="pass_peminjam"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Password</FormLabel>
@@ -143,11 +153,24 @@ export default function Register() {
                 )}
               />
 
+              <div className="pt-2">
+                <FormLabel>Foto Profil (Opsional)</FormLabel>
+                <p className="text-xs text-gray-600 mb-3">
+                  Tambahkan foto profil - akan dipotong menjadi persegi (300x300px)
+                </p>
+                <ImageInput
+                  preview={photoPreview}
+                  onImageCapture={setPhotoFile}
+                  onPreviewChange={setPhotoPreview}
+                />
+              </div>
+
               <Button
                 type="submit"
+                disabled={isLoading}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white"
               >
-                Create Account
+                {isLoading ? "Mendaftar..." : "Buat Akun"}
               </Button>
             </form>
           </Form>

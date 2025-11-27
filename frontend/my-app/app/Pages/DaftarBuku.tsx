@@ -4,19 +4,15 @@ import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { BookOpen, Plus, Edit, Trash2, ArrowLeft } from 'lucide-react';
+import { getAllBuku, createBuku, updateBuku, deleteBuku } from '~/lib/firebaseServices';
+import { Timestamp } from 'firebase/firestore';
 
 interface Buku {
-  id: number;
-  isbn: string;
-  judul: string;
-  pengarang: string;
-  penerbit?: string;
-  tahunTerbit?: number;
-  kategori: string;
-  sinopsis?: string;
-  stokTotal: number;
-  stokTersedia: number;
-  createdAt: string;
+  id_buku: string;
+  judul_buku?: string;
+  tgl_terbit?: any;
+  nama_pengarang?: string;
+  nama_penerbit?: string;
 }
 
 const DaftarBuku: React.FC = () => {
@@ -24,18 +20,7 @@ const DaftarBuku: React.FC = () => {
   const [buku, setBuku] = useState<Buku[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState({
-    isbn: '',
-    judul: '',
-    pengarang: '',
-    penerbit: '',
-    tahunTerbit: new Date().getFullYear(),
-    kategori: '',
-    sinopsis: '',
-    stokTotal: 0,
-  });
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBuku();
@@ -44,88 +29,37 @@ const DaftarBuku: React.FC = () => {
   const fetchBuku = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:3000/api/buku');
-      const data = await response.json();
-      setBuku(data.data || []);
-    } catch (error) {
+      setError(null);
+      const data = await getAllBuku();
+      setBuku(data || []);
+    } catch (error: any) {
       console.error('Error fetching buku:', error);
+      setError(error.message || 'Gagal mengambil data buku');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const method = editingId ? 'PUT' : 'POST';
-      const url = editingId 
-        ? `http://localhost:3000/api/buku/${editingId}`
-        : 'http://localhost:3000/api/buku';
 
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
 
-      if (response.ok) {
-        fetchBuku();
-        resetForm();
-        setShowForm(false);
-      }
-    } catch (error) {
-      console.error('Error submitting form:', error);
-    }
-  };
-
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id_buku: string) => {
     if (confirm('Yakin ingin menghapus buku ini?')) {
       try {
-        const response = await fetch(`http://localhost:3000/api/buku/${id}`, {
-          method: 'DELETE',
-        });
-        if (response.ok) {
-          fetchBuku();
-        }
-      } catch (error) {
+        await deleteBuku(id_buku);
+        fetchBuku();
+        alert('Buku berhasil dihapus!');
+      } catch (error: any) {
         console.error('Error deleting buku:', error);
+        alert(error.message || 'Gagal menghapus buku');
       }
     }
   };
 
-  const handleEdit = (item: Buku) => {
-    setFormData({
-      isbn: item.isbn,
-      judul: item.judul,
-      pengarang: item.pengarang,
-      penerbit: item.penerbit || '',
-      tahunTerbit: item.tahunTerbit || new Date().getFullYear(),
-      kategori: item.kategori,
-      sinopsis: item.sinopsis || '',
-      stokTotal: item.stokTotal,
-    });
-    setEditingId(item.id);
-    setShowForm(true);
-  };
 
-  const resetForm = () => {
-    setFormData({
-      isbn: '',
-      judul: '',
-      pengarang: '',
-      penerbit: '',
-      tahunTerbit: new Date().getFullYear(),
-      kategori: '',
-      sinopsis: '',
-      stokTotal: 0,
-    });
-    setEditingId(null);
-  };
 
   const filteredBuku = buku.filter(item =>
-    item.judul.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.pengarang.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.isbn.includes(searchTerm)
+    (item.judul_buku?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (item.nama_pengarang?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -147,10 +81,7 @@ const DaftarBuku: React.FC = () => {
           </div>
         </div>
         <Button
-          onClick={() => {
-            resetForm();
-            setShowForm(!showForm);
-          }}
+          onClick={() => navigate('/tambah-buku')}
           className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
         >
           <Plus className="w-4 h-4" />
@@ -158,117 +89,18 @@ const DaftarBuku: React.FC = () => {
         </Button>
       </div>
 
-      {/* Form Tambah/Edit Buku */}
-      {showForm && (
-        <Card className="p-6 bg-white shadow-sm mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">
-            {editingId ? 'Edit Buku' : 'Tambah Buku Baru'}
-          </h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">ISBN</label>
-              <Input
-                type="text"
-                value={formData.isbn}
-                onChange={(e) => setFormData({ ...formData, isbn: e.target.value })}
-                placeholder="ISBN"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Judul</label>
-              <Input
-                type="text"
-                value={formData.judul}
-                onChange={(e) => setFormData({ ...formData, judul: e.target.value })}
-                placeholder="Judul Buku"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Pengarang</label>
-              <Input
-                type="text"
-                value={formData.pengarang}
-                onChange={(e) => setFormData({ ...formData, pengarang: e.target.value })}
-                placeholder="Pengarang"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Penerbit</label>
-              <Input
-                type="text"
-                value={formData.penerbit}
-                onChange={(e) => setFormData({ ...formData, penerbit: e.target.value })}
-                placeholder="Penerbit"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tahun Terbit</label>
-              <Input
-                type="number"
-                value={formData.tahunTerbit}
-                onChange={(e) => setFormData({ ...formData, tahunTerbit: parseInt(e.target.value) })}
-                placeholder="Tahun Terbit"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
-              <Input
-                type="text"
-                value={formData.kategori}
-                onChange={(e) => setFormData({ ...formData, kategori: e.target.value })}
-                placeholder="Kategori"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Stok Total</label>
-              <Input
-                type="number"
-                value={formData.stokTotal}
-                onChange={(e) => setFormData({ ...formData, stokTotal: parseInt(e.target.value) })}
-                placeholder="Stok Total"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Sinopsis</label>
-              <Input
-                type="text"
-                value={formData.sinopsis}
-                onChange={(e) => setFormData({ ...formData, sinopsis: e.target.value })}
-                placeholder="Sinopsis"
-              />
-            </div>
-            <div className="md:col-span-2 flex gap-3">
-              <Button
-                type="submit"
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                {editingId ? 'Update' : 'Tambah'} Buku
-              </Button>
-              <Button
-                type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  resetForm();
-                }}
-                variant="outline"
-              >
-                Batal
-              </Button>
-            </div>
-          </form>
-        </Card>
+      {/* Error Message */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+          {error}
+        </div>
       )}
 
       {/* Search Bar */}
       <div className="mb-6">
         <Input
           type="text"
-          placeholder="Cari berdasarkan judul, pengarang, atau ISBN..."
+          placeholder="Cari berdasarkan judul atau pengarang..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full"
@@ -292,42 +124,26 @@ const DaftarBuku: React.FC = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">ISBN</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Judul</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Pengarang</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Kategori</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Stok</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Penerbit</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Tanggal Terbit</th>
                   <th className="text-center py-3 px-4 font-semibold text-gray-700">Aksi</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredBuku.map((item) => (
-                  <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                    <td className="py-3 px-4 text-sm text-gray-600">{item.isbn}</td>
-                    <td className="py-3 px-4 text-sm font-medium text-gray-900">{item.judul}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600">{item.pengarang}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600">{item.kategori}</td>
-                    <td className="py-3 px-4 text-sm">
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                        item.stokTersedia > 0
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {item.stokTersedia}/{item.stokTotal}
-                      </span>
+                  <tr key={item.id_buku} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                    <td className="py-3 px-4 text-sm font-medium text-gray-900">{item.judul_buku || '-'}</td>
+                    <td className="py-3 px-4 text-sm text-gray-600">{item.nama_pengarang || '-'}</td>
+                    <td className="py-3 px-4 text-sm text-gray-600">{item.nama_penerbit || '-'}</td>
+                    <td className="py-3 px-4 text-sm text-gray-600">
+                      {item.tgl_terbit ? new Date(item.tgl_terbit.seconds * 1000).toLocaleDateString('id-ID') : '-'}
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex justify-center gap-2">
                         <Button
-                          onClick={() => handleEdit(item)}
-                          size="sm"
-                          className="bg-blue-600 hover:bg-blue-700 text-white gap-1"
-                        >
-                          <Edit className="w-3 h-3" />
-                          Edit
-                        </Button>
-                        <Button
-                          onClick={() => handleDelete(item.id)}
+                          onClick={() => handleDelete(item.id_buku)}
                           size="sm"
                           className="bg-red-600 hover:bg-red-700 text-white gap-1"
                         >
