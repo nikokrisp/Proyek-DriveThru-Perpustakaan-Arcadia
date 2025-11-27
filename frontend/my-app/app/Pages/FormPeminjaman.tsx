@@ -30,10 +30,6 @@ const bukuDetailSchema = z.object({
 });
 
 const peminjamanSchema = z.object({
-  namaPeminjam: z.string().min(3, "Nama harus minimal 3 karakter"),
-  nimNpm: z.string().min(5, "NIM/NPM harus minimal 5 karakter"),
-  email: z.string().email("Email tidak valid"),
-  noTelepon: z.string().regex(/^[0-9]{10,12}$/, "Nomor telepon harus 10-12 digit"),
   bukuDetail: z.array(bukuDetailSchema).min(1, "Minimal ada satu buku yang harus dipinjam"),
 });
 
@@ -45,10 +41,6 @@ export default function FormPeminjaman() {
   const form = useForm<PeminjamanFormValues>({
     resolver: zodResolver(peminjamanSchema),
     defaultValues: {
-      namaPeminjam: "",
-      nimNpm: "",
-      email: "",
-      noTelepon: "",
       bukuDetail: [
         {
           judulBuku: "",
@@ -70,10 +62,6 @@ export default function FormPeminjaman() {
     const statusPinjam = "aktif";
 
     const peminjamanData = {
-      namaPeminjam: data.namaPeminjam,
-      nimNpm: data.nimNpm,
-      email: data.email,
-      noTelepon: data.noTelepon,
       tanggalPeminjaman,
       statusPinjam,
       bukuDetail: data.bukuDetail,
@@ -116,88 +104,6 @@ export default function FormPeminjaman() {
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                {/* Informasi Peminjam */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Informasi Peminjam</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Nama Peminjam */}
-                    <FormField
-                      control={form.control}
-                      name="namaPeminjam"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nama Lengkap</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Masukkan nama lengkap Anda"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* NIM/NPM */}
-                    <FormField
-                      control={form.control}
-                      name="nimNpm"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>NIM/NPM</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Masukkan NIM atau NPM Anda"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Email */}
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="email"
-                              placeholder="Masukkan email Anda"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* No Telepon */}
-                    <FormField
-                      control={form.control}
-                      name="noTelepon"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nomor Telepon</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="08xxxxxxxxxx"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-
-                {/* Divider */}
-                <div className="border-t border-gray-200"></div>
-
                 {/* Detail Buku */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
